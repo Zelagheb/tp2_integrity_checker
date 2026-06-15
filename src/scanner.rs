@@ -116,3 +116,36 @@ mod tests {
         fs::remove_file(path).ok();
     }
 }
+#[cfg(test)]
+mod integration_tests {
+    use super::*;
+    use crate::ioc::IocEntry;
+
+    #[test]
+    fn test_scan_directory_finds_all_files() {
+        let results = scan_target(std::path::Path::new("samples/files"), &[]);
+        assert!(results.len() >= 3);
+    }
+
+    #[test]
+    fn test_scan_directory_detects_match() {
+        let iocs = vec![IocEntry {
+            hash: "44ea92bec1f9e8aa690d8aceddf1294e9fb4a71d39769d6f383e3915ac76bb3b"
+                .to_string(),
+            label: "Demo suspicious test sample".to_string(),
+        }];
+        let results = scan_target(std::path::Path::new("samples/files"), &iocs);
+        let matches: Vec<_> = results
+            .iter()
+            .filter(|r| matches!(r.status, ScanStatus::Match(_)))
+            .collect();
+        assert_eq!(matches.len(), 1);
+    }
+
+    #[test]
+    fn test_scan_missing_target_returns_error() {
+        let results = scan_target(std::path::Path::new("samples/nonexistent"), &[]);
+        assert_eq!(results.len(), 1);
+        assert!(matches!(results[0].status, ScanStatus::Error(_)));
+    }
+}
